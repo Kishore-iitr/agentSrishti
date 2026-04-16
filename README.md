@@ -45,7 +45,10 @@ Agentic-Event-Planner
    - `OPENROUTER_API_KEY`
    - `TAVILY_API_KEY`
    - `LANGSMITH_API_KEY` or `LANGCHAIN_API_KEY` if you want tracing
-3. Launch the site:
+  
+   <img width="1480" height="499" alt="image" src="https://github.com/user-attachments/assets/14d3df79-e8a1-4165-9f88-3923fa407a14" />
+
+4. Launch the site:
 
 ```bash
 streamlit run main.py
