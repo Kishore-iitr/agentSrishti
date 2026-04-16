@@ -1,0 +1,27 @@
+streamlit
+python-dotenv
+pandas
+numpy
+scikit-learn
+
+langchain
+langchain-core
+langchain-community
+langchain-openai
+langgraph
+langsmith
+
+chromadb
+sentence-transformers
+tavily-python
+
+# Utilities used in notebooks and data workflows
+requests
+tqdm
+kaggle
+beautifulsoup4
+lxml
+matplotlib
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
