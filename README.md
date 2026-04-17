@@ -77,6 +77,8 @@ For Traceability and monitoring (LANGSMITH)
 <img width="1919" height="866" alt="image" src="https://github.com/user-attachments/assets/4c1ed49b-0cf1-4b04-a3e5-285dca59ffd8" />
 
 
+ACHIEVED 0 HALLUCINATION WITH THE SELF RAG ARCHITECTURE:
+
   <img width="1445" height="645" alt="grpah_basic" src="https://github.com/user-attachments/assets/bf292a4a-9c0d-4e61-b52f-19a90af5cc3c" />
 
 
