@@ -24,7 +24,7 @@ Agentic-Event-Planner
 │   ├── communities.csv
 │   ├── contacts.csv
 │   └── ...
-│
+│── 📁 Research files #all the basic codes that were written
 ├── 📁 vector_db/                # Base vector database (general embeddings)
 ├── 📁 sponsor_vector_db/        # Sponsor-specific embeddings
 ├── 📁 speaker_vector_db/        # Speaker-specific embeddings
@@ -71,6 +71,7 @@ streamlit run main.py
 - Chroma vector database loading from the existing data directories
 - Optional Tavily web enrichment and LangSmith tracing support
 - Outreach drafting with Gmail send support when credentials are available
+- and much more !! (Read the report and go thorugh the video attached for more ideas)
 
 For Traceability and monitoring (LANGSMITH)
 <img width="1919" height="866" alt="image" src="https://github.com/user-attachments/assets/4c1ed49b-0cf1-4b04-a3e5-285dca59ffd8" />
