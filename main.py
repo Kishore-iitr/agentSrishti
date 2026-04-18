@@ -316,9 +316,43 @@ def set_runtime_setting(name: str, value: str) -> None:
     st.session_state[f"runtime_{name.lower()}"] = safe_text(value)
 
 
+# ...existing code...
+
 def render_settings_panel() -> None:
     if "settings_panel_open" not in st.session_state:
         st.session_state["settings_panel_open"] = False
+
+    # Safe sync mode (avoid mutating widget keys after widget creation)
+    sync_mode = safe_text(st.session_state.pop("_settings_sync_mode", ""))
+    widget_map = {
+        "OPENROUTER_API_KEY": "settings_openrouter_api_key",
+        "TAVILY_API_KEY": "settings_tavily_api_key",
+        "LANGSMITH_API_KEY": "settings_langsmith_api_key",
+        "LANGCHAIN_API_KEY": "settings_langchain_api_key",
+        "LANGCHAIN_PROJECT": "settings_langchain_project",
+        "LANGCHAIN_ENDPOINT": "settings_langchain_endpoint",
+    }
+
+    if sync_mode in ("env", "clear"):
+        for w_key in widget_map.values():
+            st.session_state.pop(w_key, None)
+
+    # Initialize widget state BEFORE creating widgets:
+    # - First load shows env/default values
+    # - Later keeps user-edited values unless reset/clear requested
+    for setting_name, w_key in widget_map.items():
+        if w_key not in st.session_state:
+            st.session_state[w_key] = get_runtime_setting(
+                setting_name,
+                {
+                    "OPENROUTER_API_KEY": OPENROUTER_API_KEY,
+                    "TAVILY_API_KEY": TAVILY_API_KEY,
+                    "LANGSMITH_API_KEY": LANGSMITH_API_KEY,
+                    "LANGCHAIN_API_KEY": LANGCHAIN_API_KEY,
+                    "LANGCHAIN_PROJECT": LANGCHAIN_PROJECT,
+                    "LANGCHAIN_ENDPOINT": LANGCHAIN_ENDPOINT,
+                }.get(setting_name, ""),
+            )
 
     button_label = "Hide Settings" if st.session_state["settings_panel_open"] else "Settings"
     if st.button(button_label, key="toggle_settings_panel", use_container_width=True):
@@ -335,21 +369,18 @@ def render_settings_panel() -> None:
     with col1:
         openrouter_key = st.text_input(
             "OpenRouter API Key",
-            value=get_runtime_setting("OPENROUTER_API_KEY", OPENROUTER_API_KEY),
             type="password",
             key="settings_openrouter_api_key",
             placeholder="Enter OpenRouter API key",
         )
         tavily_key = st.text_input(
             "Tavily API Key",
-            value=get_runtime_setting("TAVILY_API_KEY", TAVILY_API_KEY),
             type="password",
             key="settings_tavily_api_key",
             placeholder="Enter Tavily API key",
         )
         langsmith_key = st.text_input(
             "LangSmith API Key",
-            value=get_runtime_setting("LANGSMITH_API_KEY", LANGSMITH_API_KEY),
             type="password",
             key="settings_langsmith_api_key",
             placeholder="Enter LangSmith API key",
@@ -357,20 +388,17 @@ def render_settings_panel() -> None:
     with col2:
         langchain_key = st.text_input(
             "LangChain API Key",
-            value=get_runtime_setting("LANGCHAIN_API_KEY", LANGCHAIN_API_KEY),
             type="password",
             key="settings_langchain_api_key",
             placeholder="Enter LangChain API key",
         )
         langchain_project = st.text_input(
             "LangSmith Project Name",
-            value=get_runtime_setting("LANGCHAIN_PROJECT", LANGCHAIN_PROJECT),
             key="settings_langchain_project",
             placeholder="Enter project name",
         )
         langchain_endpoint = st.text_input(
             "LangSmith Endpoint",
-            value=get_runtime_setting("LANGCHAIN_ENDPOINT", LANGCHAIN_ENDPOINT),
             key="settings_langchain_endpoint",
             placeholder="https://api.smith.langchain.com",
         )
@@ -383,12 +411,6 @@ def render_settings_panel() -> None:
         set_runtime_setting("LANGCHAIN_API_KEY", langchain_key)
         set_runtime_setting("LANGCHAIN_PROJECT", langchain_project)
         set_runtime_setting("LANGCHAIN_ENDPOINT", langchain_endpoint)
-        st.session_state["settings_openrouter_api_key"] = openrouter_key
-        st.session_state["settings_tavily_api_key"] = tavily_key
-        st.session_state["settings_langsmith_api_key"] = langsmith_key
-        st.session_state["settings_langchain_api_key"] = langchain_key
-        st.session_state["settings_langchain_project"] = langchain_project
-        st.session_state["settings_langchain_endpoint"] = langchain_endpoint
         try:
             get_llm.clear()
         except Exception:
@@ -398,39 +420,146 @@ def render_settings_panel() -> None:
     if save_cols[1].button("Reset to Environment", key="reset_runtime_settings", use_container_width=True):
         for setting_name in RUNTIME_SETTING_KEYS:
             st.session_state.pop(f"runtime_{setting_name.lower()}", None)
-        st.session_state["settings_openrouter_api_key"] = get_runtime_setting("OPENROUTER_API_KEY", OPENROUTER_API_KEY)
-        st.session_state["settings_tavily_api_key"] = get_runtime_setting("TAVILY_API_KEY", TAVILY_API_KEY)
-        st.session_state["settings_langsmith_api_key"] = get_runtime_setting("LANGSMITH_API_KEY", LANGSMITH_API_KEY)
-        st.session_state["settings_langchain_api_key"] = get_runtime_setting("LANGCHAIN_API_KEY", LANGCHAIN_API_KEY)
-        st.session_state["settings_langchain_project"] = get_runtime_setting("LANGCHAIN_PROJECT", LANGCHAIN_PROJECT)
-        st.session_state["settings_langchain_endpoint"] = get_runtime_setting("LANGCHAIN_ENDPOINT", LANGCHAIN_ENDPOINT)
+        st.session_state["_settings_sync_mode"] = "env"
         try:
             get_llm.clear()
         except Exception:
             pass
-        st.success("Session overrides cleared. Environment values will be used.")
         st.rerun()
 
     if save_cols[2].button("Clear All", key="clear_runtime_settings", use_container_width=True):
         for setting_name in RUNTIME_SETTING_KEYS:
             st.session_state[f"runtime_{setting_name.lower()}"] = ""
-        st.session_state["settings_openrouter_api_key"] = ""
-        st.session_state["settings_tavily_api_key"] = ""
-        st.session_state["settings_langsmith_api_key"] = ""
-        st.session_state["settings_langchain_api_key"] = ""
-        st.session_state["settings_langchain_project"] = ""
-        st.session_state["settings_langchain_endpoint"] = ""
+        st.session_state["_settings_sync_mode"] = "clear"
         try:
             get_llm.clear()
         except Exception:
             pass
-        st.success("Session values cleared.")
+        st.rerun()
 
     status_cols = st.columns(3)
     status_cols[0].metric("OpenRouter", "Ready" if safe_text(openrouter_key) else "Missing")
     status_cols[1].metric("Tavily", "Ready" if safe_text(tavily_key) else "Missing")
     status_cols[2].metric("LangSmith", "Ready" if safe_text(langsmith_key or langchain_key) else "Missing")
     st.markdown("</div>", unsafe_allow_html=True)
+
+# ...existing code...
+
+# def render_settings_panel() -> None:
+#     if "settings_panel_open" not in st.session_state:
+#         st.session_state["settings_panel_open"] = False
+
+#     button_label = "Hide Settings" if st.session_state["settings_panel_open"] else "Settings"
+#     if st.button(button_label, key="toggle_settings_panel", use_container_width=True):
+#         st.session_state["settings_panel_open"] = not st.session_state["settings_panel_open"]
+
+#     if not st.session_state["settings_panel_open"]:
+#         return
+
+#     st.markdown('<div class="section-card">', unsafe_allow_html=True)
+#     st.subheader("Runtime Settings")
+#     st.write("Set the API keys and project name for this session without hardcoding them into the app.")
+
+#     col1, col2 = st.columns(2)
+#     with col1:
+#         openrouter_key = st.text_input(
+#             "OpenRouter API Key",
+#             value=get_runtime_setting("OPENROUTER_API_KEY", OPENROUTER_API_KEY),
+#             type="password",
+#             key="settings_openrouter_api_key",
+#             placeholder="Enter OpenRouter API key",
+#         )
+#         tavily_key = st.text_input(
+#             "Tavily API Key",
+#             value=get_runtime_setting("TAVILY_API_KEY", TAVILY_API_KEY),
+#             type="password",
+#             key="settings_tavily_api_key",
+#             placeholder="Enter Tavily API key",
+#         )
+#         langsmith_key = st.text_input(
+#             "LangSmith API Key",
+#             value=get_runtime_setting("LANGSMITH_API_KEY", LANGSMITH_API_KEY),
+#             type="password",
+#             key="settings_langsmith_api_key",
+#             placeholder="Enter LangSmith API key",
+#         )
+#     with col2:
+#         langchain_key = st.text_input(
+#             "LangChain API Key",
+#             value=get_runtime_setting("LANGCHAIN_API_KEY", LANGCHAIN_API_KEY),
+#             type="password",
+#             key="settings_langchain_api_key",
+#             placeholder="Enter LangChain API key",
+#         )
+#         langchain_project = st.text_input(
+#             "LangSmith Project Name",
+#             value=get_runtime_setting("LANGCHAIN_PROJECT", LANGCHAIN_PROJECT),
+#             key="settings_langchain_project",
+#             placeholder="Enter project name",
+#         )
+#         langchain_endpoint = st.text_input(
+#             "LangSmith Endpoint",
+#             value=get_runtime_setting("LANGCHAIN_ENDPOINT", LANGCHAIN_ENDPOINT),
+#             key="settings_langchain_endpoint",
+#             placeholder="https://api.smith.langchain.com",
+#         )
+
+#     save_cols = st.columns(3)
+#     if save_cols[0].button("Save Settings", key="save_runtime_settings", use_container_width=True):
+#         set_runtime_setting("OPENROUTER_API_KEY", openrouter_key)
+#         set_runtime_setting("TAVILY_API_KEY", tavily_key)
+#         set_runtime_setting("LANGSMITH_API_KEY", langsmith_key)
+#         set_runtime_setting("LANGCHAIN_API_KEY", langchain_key)
+#         set_runtime_setting("LANGCHAIN_PROJECT", langchain_project)
+#         set_runtime_setting("LANGCHAIN_ENDPOINT", langchain_endpoint)
+#         st.session_state["settings_openrouter_api_key"] = openrouter_key
+#         st.session_state["settings_tavily_api_key"] = tavily_key
+#         st.session_state["settings_langsmith_api_key"] = langsmith_key
+#         st.session_state["settings_langchain_api_key"] = langchain_key
+#         st.session_state["settings_langchain_project"] = langchain_project
+#         st.session_state["settings_langchain_endpoint"] = langchain_endpoint
+#         try:
+#             get_llm.clear()
+#         except Exception:
+#             pass
+#         st.success("Settings saved for this session.")
+
+#     if save_cols[1].button("Reset to Environment", key="reset_runtime_settings", use_container_width=True):
+#         for setting_name in RUNTIME_SETTING_KEYS:
+#             st.session_state.pop(f"runtime_{setting_name.lower()}", None)
+#         st.session_state["settings_openrouter_api_key"] = get_runtime_setting("OPENROUTER_API_KEY", OPENROUTER_API_KEY)
+#         st.session_state["settings_tavily_api_key"] = get_runtime_setting("TAVILY_API_KEY", TAVILY_API_KEY)
+#         st.session_state["settings_langsmith_api_key"] = get_runtime_setting("LANGSMITH_API_KEY", LANGSMITH_API_KEY)
+#         st.session_state["settings_langchain_api_key"] = get_runtime_setting("LANGCHAIN_API_KEY", LANGCHAIN_API_KEY)
+#         st.session_state["settings_langchain_project"] = get_runtime_setting("LANGCHAIN_PROJECT", LANGCHAIN_PROJECT)
+#         st.session_state["settings_langchain_endpoint"] = get_runtime_setting("LANGCHAIN_ENDPOINT", LANGCHAIN_ENDPOINT)
+#         try:
+#             get_llm.clear()
+#         except Exception:
+#             pass
+#         st.success("Session overrides cleared. Environment values will be used.")
+#         st.rerun()
+
+#     if save_cols[2].button("Clear All", key="clear_runtime_settings", use_container_width=True):
+#         for setting_name in RUNTIME_SETTING_KEYS:
+#             st.session_state[f"runtime_{setting_name.lower()}"] = ""
+#         st.session_state["settings_openrouter_api_key"] = ""
+#         st.session_state["settings_tavily_api_key"] = ""
+#         st.session_state["settings_langsmith_api_key"] = ""
+#         st.session_state["settings_langchain_api_key"] = ""
+#         st.session_state["settings_langchain_project"] = ""
+#         st.session_state["settings_langchain_endpoint"] = ""
+#         try:
+#             get_llm.clear()
+#         except Exception:
+#             pass
+#         st.success("Session values cleared.")
+
+#     status_cols = st.columns(3)
+#     status_cols[0].metric("OpenRouter", "Ready" if safe_text(openrouter_key) else "Missing")
+#     status_cols[1].metric("Tavily", "Ready" if safe_text(tavily_key) else "Missing")
+#     status_cols[2].metric("LangSmith", "Ready" if safe_text(langsmith_key or langchain_key) else "Missing")
+#     st.markdown("</div>", unsafe_allow_html=True)
 
 
 def normalize_whitespace(text: str) -> str:
